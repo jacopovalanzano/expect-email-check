@@ -18,3 +18,7 @@ Checkout the *tests* folder.
 ``$ bash expect-email-fetch/tests/expect-email-fetch-test.bash``
 
 The script should produce two files, ***success*** and ***fail***; each file should contain 3 emails.
+
+## License
+
+MIT

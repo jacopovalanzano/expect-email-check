@@ -1,0 +1,100 @@
+#!/usr/bin/expect
+
+# Exits after 5 seconds of inactivity
+set timeout 5
+
+# Pass file containing a list of emails
+set email_list [lindex $argv 0]
+
+# Pass mail server
+set email_server [lindex $argv 1]
+
+# Pass email
+set your_email [lindex $argv 2]
+
+# Set emails list
+set list [open $email_list r]
+
+# Get email from each line
+set emails [split [read $list] "\n"]
+close $list
+
+# Telnet
+spawn telnet $email_server 25
+
+expect "Trying"
+
+expect "Connected"
+
+expect "Escape"
+
+expect "220" {
+	send "helo hi\r"
+}
+
+# Email associated with the "helo" (no email is sent)
+expect "250" {
+	send "mail from: <$your_email>\r"
+}
+
+# If mail server lets us connect, verify email
+expect "250 2.1.0 OK" {
+
+	foreach email_to_find $emails {
+
+		send "rcpt to: <$email_to_find>\r"
+
+		expect {
+
+			# If the email exists, and the account is active:
+			"250 2.1.5 OK" {
+				exec >@stdout 2>@stderr echo $email_to_find >> ./success
+			}
+
+			# Below some errors
+			"550*" {
+				exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+			}
+
+			# Email disabled
+			"550-5.2.1*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+			}
+
+                        "552*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+                        }
+
+                        "553*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+                        }
+
+			# !!!
+                        "555 5.5.2*" {
+				send "quit\r"
+				exit
+                        }
+
+			"452-4.2.2*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+			}
+
+			# The email server had enough. Try again later. (exit)
+			"452-4.5.3*" {
+                                send "quit\r"
+				exit
+			}
+
+			# The email server had enough, or, bad credentials. Some mail server use 221 errors when the limit has been exceeded. (exit)
+                        "221*" {
+                                send "quit\r"
+                                exit
+                        }
+
+		}
+	}
+}
+
+# Close
+send "quit\r"
+exit

@@ -38,7 +38,7 @@ expect "250" {
 }
 
 # If mail server lets us connect, verify email
-expect "250 2.1.0 OK" {
+expect "250 2.1.0 O*" {
 
 	foreach email_to_find $emails {
 
@@ -46,28 +46,28 @@ expect "250 2.1.0 OK" {
 
 		expect {
 
+			# Different Mail Servers may use slightly different conventions, for example, some may reply with an
+			# "250 2.1.5 OK" while other may use "250 2.1.5 Ok" (notice the lower case "k")
+
 			# If the email exists, and the account is active:
-			"250 2.1.5 OK" {
+			"250 2.1.5 O*" {
 				exec >@stdout 2>@stderr echo $email_to_find >> ./success
 			}
 
-			# Below some errors
-			"550*" {
-				exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+			# 501 5.1.3 Bad recipient address syntax
+                        "501 5.1.3*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+                        }
+
+			# 550 5.7.1 XGEMAIL_0011 Command rejected
+			"550 5.7.1*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail			
 			}
 
 			# Email disabled
 			"550-5.2.1*" {
                                 exec >@stdout 2>@stderr echo $email_to_find >> ./fail
 			}
-
-                        "552*" {
-                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
-                        }
-
-                        "553*" {
-                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
-                        }
 
 			# !!!
                         "555 5.5.2*" {
@@ -89,6 +89,19 @@ expect "250 2.1.0 OK" {
                         "221*" {
                                 send "quit\r"
                                 exit
+                        }
+
+                        # Below we try to catch all errors
+                        "550*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+                        }
+
+                        "552*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
+                        }
+
+                        "553*" {
+                                exec >@stdout 2>@stderr echo $email_to_find >> ./fail
                         }
 
 		}

@@ -1,3 +1,5 @@
+![Archived](https://img.shields.io/badge/Status-Archived-red)
+
 Brief **Expect** script to validate an e-mail list (check if the email exists).
 
 ## Usage
